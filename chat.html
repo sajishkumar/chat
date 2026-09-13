@@ -146,7 +146,7 @@ html, body {
     margin: 4px 0; text-align: center; max-width: 88%; animation: fadeUp .2s ease;
 }
 
-/* ═══ SENT (RIGHT) vs RECV (LEFT) ALIGNMENT ═══ */
+/* SENT vs RECV ALIGNMENT */
 .msg-row {
     display: flex; flex-direction: column; max-width: 85%;
     animation: fadeUp .2s ease; position: relative; margin-bottom: 2px;
@@ -170,19 +170,30 @@ html, body {
 .recv .bubble { background: var(--recv-bg); border-radius: 4px 18px 18px 18px; color: var(--txt); text-align: left; }
 .sender-name { font-size: 14px; font-weight: 700; color: var(--grn); margin-bottom: 3px; padding-left: 2px; }
 
+/* ═══ REPLY / TAGGED QUOTE INSIDE BUBBLE ═══ */
+.reply-quote {
+    background: rgba(0,0,0,.25); border-left: 3.5px solid var(--grn);
+    border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; font-size: 14px;
+}
+.sent .reply-quote { background: rgba(0,0,0,.2); border-left-color: #fff; }
+.reply-quote-name { font-size: 13px; font-weight: 700; color: var(--grn2); margin-bottom: 2px; }
+.sent .reply-quote-name { color: #80eec0; }
+.reply-quote-text { font-size: 14px; color: var(--txt2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px; }
+.sent .reply-quote-text { color: rgba(255,255,255,.85); }
+
 .bubble-meta {
     font-size: 12px; color: var(--txt2); margin-top: 4px; padding: 0 3px;
     display: flex; align-items: center; gap: 4px;
 }
 .sent .bubble-meta { justify-content: flex-end; color: rgba(255,255,255,.75); }
 
-/* ═══ BLUE TICK STYLING ═══ */
+/* BLUE TICK STYLING */
 .tick {
     font-size: 15px; color: rgba(255,255,255,.65);
     display: inline-block; margin-left: 3px; transition: color .2s ease;
 }
 .tick.read {
-    color: #34b7f1 !important; /* BRIGHT BLUE DOUBLE TICK */
+    color: #34b7f1 !important;
     font-weight: 700;
 }
 
@@ -207,7 +218,7 @@ html, body {
     text-decoration: none; font-size: 15px; font-weight: 600; margin-bottom: 4px;
 }
 
-/* Delete bar */
+/* Delete / Action Bar */
 #delete-bar {
     display: none; flex-shrink: 0;
     background: var(--hdr); border-top: 1px solid var(--bdr);
@@ -218,12 +229,26 @@ html, body {
 #delete-bar.show { display: flex; }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: none; } }
 .del-bar-btn {
-    padding: 10px 16px; border: none; border-radius: 10px; font-size: 15px; font-weight: 600;
-    font-family: var(--fn); cursor: pointer; display: flex; align-items: center; gap: 6px;
+    padding: 10px 14px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600;
+    font-family: var(--fn); cursor: pointer; display: flex; align-items: center; gap: 4px;
 }
 .del-everyone { background: var(--red); color: #fff; }
 .del-me { background: var(--input); color: var(--txt); }
-.del-cancel { background: none; border: none; color: var(--txt2); font-size: 15px; font-family: var(--fn); cursor: pointer; padding: 10px; }
+.del-reply { background: var(--grn); color: #fff; }
+.del-cancel { background: none; border: none; color: var(--txt2); font-size: 15px; font-family: var(--fn); cursor: pointer; padding: 8px; }
+
+/* ═══ REPLY PREVIEW BAR (Above Input) ═══ */
+#reply-bar {
+    display: none; align-items: center; justify-content: space-between;
+    background: var(--panel); border-top: 1px solid var(--bdr);
+    border-left: 4px solid var(--grn); padding: 8px 14px;
+    flex-shrink: 0; position: relative; z-index: 20;
+}
+#reply-bar.show { display: flex; }
+.reply-info { display: flex; flex-direction: column; gap: 2px; overflow: hidden; min-width: 0; }
+.reply-name { font-size: 13px; font-weight: 700; color: var(--grn); }
+.reply-text { font-size: 14px; color: var(--txt2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.reply-close { background: none; border: none; color: var(--txt2); font-size: 18px; cursor: pointer; padding: 4px 8px; }
 
 /* Typing row */
 .typing-row { align-self: flex-start; display: none; margin: 2px 12px; }
@@ -418,10 +443,11 @@ html, body {
 
     <button id="scroll-btn" onclick="scrollToBottom()">↓</button>
 
-    <!-- Delete bar -->
+    <!-- Delete & Action bar -->
     <div id="delete-bar">
         <button class="del-cancel" onclick="deselectMsg()">Cancel</button>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:6px;">
+            <button class="del-bar-btn del-reply" onclick="startReplySelected()">↩️ Reply</button>
             <button class="del-bar-btn del-me" onclick="deleteForMe()">Delete for me</button>
             <button class="del-bar-btn del-everyone" id="del-everyone-btn" onclick="deleteForEveryone()">Delete for all</button>
         </div>
@@ -429,6 +455,15 @@ html, body {
 
     <!-- Hidden file input for attachments -->
     <input type="file" id="file-input" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt" style="display:none" onchange="handleFileSelect(event)">
+
+    <!-- Reply Preview Bar (above Input) -->
+    <div id="reply-bar">
+        <div class="reply-info">
+            <div class="reply-name" id="reply-bar-name">Replying to Alex</div>
+            <div class="reply-text" id="reply-bar-text">Message preview...</div>
+        </div>
+        <button class="reply-close" onclick="cancelReply()">✕</button>
+    </div>
 
     <div class="input-bar" id="input-bar">
         <!-- Attachment Button -->
@@ -521,8 +556,10 @@ let lastDateShown=null, typingTimer=null, isTypingNow=false;
 let unread=0, atBottom=true;
 let renderedKeys = new Set();
 let selectedKey = null;
+let selectedMsgData = null;
 let selectedIsSent = false;
 let currentCallData = null;
+let replyTarget = null; // Tagged / Replied message object
 
 /* ════════════════════════════════════════
    MOBILE KEYBOARD VIEWPORT FIX
@@ -559,6 +596,13 @@ window.addEventListener('load', () => {
     const urlRoom = new URLSearchParams(location.search).get('room');
     const savedRoom = localStorage.getItem('chat_room');
     const room = urlRoom || savedRoom;
+
+    // Set room code input field default from URL parameter or saved room
+    if (urlRoom) {
+        document.getElementById('inp-room').value = urlRoom;
+    } else if (savedRoom) {
+        document.getElementById('inp-room').value = savedRoom;
+    }
 
     if (savedName && room) {
         myName = savedName;
@@ -647,10 +691,8 @@ function startChat() {
             return;
         }
 
-        // Check if message is sent by me
         const isSent = msg.uid ? (msg.uid === myUid) : (msg.name && myName && msg.name.trim().toLowerCase() === myName.trim().toLowerCase());
         
-        // Update Blue Double Tick when recipient reads it
         if (isSent && msg.readBy) {
             const hasOtherReader = Object.keys(msg.readBy).some(uid => uid !== myUid);
             if (hasOtherReader) {
@@ -722,20 +764,52 @@ function startChat() {
 }
 
 /* ════════════════════════════════════════
-   SEND MESSAGE & ATTACHMENTS
+   SEND MESSAGE, TAG REPLIES & ATTACHMENTS
 ════════════════════════════════════════ */
 function sendMsg() {
     const input = document.getElementById('msg-input');
     const text = input.value.trim();
-    if (!text) return;
+    if (!text && !replyTarget) return;
     stopTyping();
     input.value=''; input.style.height='';
-    msgsRef.push({
+
+    const msgObj = {
         name: myName,
         uid: myUid,
         text: text,
         ts: firebase.database.ServerValue.TIMESTAMP
-    });
+    };
+
+    // Attach reply / tag information
+    if (replyTarget) {
+        msgObj.replyTo = {
+            name: replyTarget.name,
+            text: replyTarget.text
+        };
+        cancelReply();
+    }
+
+    msgsRef.push(msgObj);
+}
+
+function startReplySelected() {
+    if (!selectedMsgData) return;
+    replyTarget = {
+        name: selectedMsgData.name || 'Chat',
+        text: selectedMsgData.text || (selectedMsgData.mediaType ? '[' + selectedMsgData.mediaType + ']' : 'Message')
+    };
+
+    document.getElementById('reply-bar-name').textContent = '↩️ Replying to ' + replyTarget.name;
+    document.getElementById('reply-bar-text').textContent = replyTarget.text;
+    document.getElementById('reply-bar').classList.add('show');
+
+    deselectMsg();
+    document.getElementById('msg-input').focus();
+}
+
+function cancelReply() {
+    replyTarget = null;
+    document.getElementById('reply-bar').classList.remove('show');
 }
 
 function triggerFileSelect() {
@@ -768,11 +842,18 @@ function handleFileSelect(e) {
                 ctx.drawImage(img, 0, 0, w, h);
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
 
-                msgsRef.push({
+                const msgObj = {
                     name: myName, uid: myUid,
                     text: '', mediaType: 'image', mediaUrl: dataUrl,
                     ts: firebase.database.ServerValue.TIMESTAMP
-                });
+                };
+
+                if (replyTarget) {
+                    msgObj.replyTo = { name: replyTarget.name, text: replyTarget.text };
+                    cancelReply();
+                }
+
+                msgsRef.push(msgObj);
                 showToast('✅ Photo sent!');
             };
             img.src = evt.target.result;
@@ -782,12 +863,19 @@ function handleFileSelect(e) {
         const reader = new FileReader();
         reader.onload = function(evt) {
             const dataUrl = evt.target.result;
-            msgsRef.push({
+            const msgObj = {
                 name: myName, uid: myUid,
                 text: '', mediaType: isVid ? 'video' : 'file', fileName: file.name,
                 mediaUrl: dataUrl,
                 ts: firebase.database.ServerValue.TIMESTAMP
-            });
+            };
+
+            if (replyTarget) {
+                msgObj.replyTo = { name: replyTarget.name, text: replyTarget.text };
+                cancelReply();
+            }
+
+            msgsRef.push(msgObj);
             showToast('✅ Attachment sent!');
         };
         reader.readAsDataURL(file);
@@ -799,15 +887,13 @@ function handleFileSelect(e) {
 }
 
 /* ════════════════════════════════════════
-   RENDER MESSAGE (EXACT SENT vs RECV & BLUE TICK)
+   RENDER MESSAGE WITH TAG/REPLY SUPPORT
 ════════════════════════════════════════ */
 function renderMessage(key, msg) {
     if (renderedKeys.has(key)) return;
     renderedKeys.add(key);
 
     const msgs = document.getElementById('msgs');
-    
-    // STRICT CHECK: Determine if sent by me (using myUid primarily)
     const isSent = msg.uid ? (msg.uid === myUid) : (msg.name && myName && msg.name.trim().toLowerCase() === myName.trim().toLowerCase());
     
     const ts = msg.ts || Date.now();
@@ -831,6 +917,7 @@ function renderMessage(key, msg) {
     const row = document.createElement('div');
     row.className = 'msg-row ' + (isSent ? 'sent' : 'recv');
     row.dataset.key = key;
+    row.dataset.msgJson = JSON.stringify(msg);
 
     const isDeleted = msg.deleted;
     if (isDeleted) row.classList.add('deleted');
@@ -856,8 +943,18 @@ function renderMessage(key, msg) {
         }
     }
 
+    // Render Reply/Tag Quote box if present
+    let replyQuoteHTML = '';
+    if (!isDeleted && msg.replyTo) {
+        replyQuoteHTML = `
+            <div class="reply-quote">
+                <div class="reply-quote-name">${esc(msg.replyTo.name)}</div>
+                <div class="reply-quote-text">${esc(msg.replyTo.text)}</div>
+            </div>`;
+    }
+
     const textHTML = msg.text ? esc(msg.text).replace(/\n/g, '<br>') : '';
-    const bubbleContent = isDeleted ? '🚫 <i>Message deleted</i>' : (mediaHTML + textHTML);
+    const bubbleContent = isDeleted ? '🚫 <i>Message deleted</i>' : (replyQuoteHTML + mediaHTML + textHTML);
 
     row.innerHTML = `
         ${(!isSent && !isDeleted) ? '<div class="sender-name">' + esc(msg.name) + '</div>' : ''}
@@ -871,7 +968,7 @@ function renderMessage(key, msg) {
         row.addEventListener('click', (e) => {
             if (e.target.tagName !== 'IMG' && e.target.tagName !== 'VIDEO' && e.target.tagName !== 'A') {
                 e.stopPropagation();
-                selectMsg(key, isSent);
+                selectMsg(key, isSent, msg);
             }
         });
     }
@@ -879,7 +976,6 @@ function renderMessage(key, msg) {
     msgs.appendChild(row);
     scrollToBottomIfNear();
 
-    // Mark incoming messages as read automatically
     if (!isSent && !document.hidden) markMsgRead(key);
     if (document.hidden && !isSent) {
         unread++;
@@ -904,14 +1000,15 @@ function addSysMsg(text) {
 }
 
 /* ════════════════════════════════════════
-   SELECT & DELETE MESSAGES
+   SELECT, REPLY & DELETE MESSAGES
 ════════════════════════════════════════ */
-function selectMsg(key, isSent) {
+function selectMsg(key, isSent, msgObj) {
     document.querySelectorAll('.msg-row.selected').forEach(el => el.classList.remove('selected'));
     if (selectedKey === key) { deselectMsg(); return; }
 
     selectedKey = key;
     selectedIsSent = isSent;
+    selectedMsgData = msgObj || {};
 
     const el = document.querySelector('.msg-row[data-key="'+key+'"]');
     if (el) el.classList.add('selected');
@@ -924,6 +1021,7 @@ function selectMsg(key, isSent) {
 function deselectMsg() {
     document.querySelectorAll('.msg-row.selected').forEach(el => el.classList.remove('selected'));
     selectedKey = null;
+    selectedMsgData = null;
     document.getElementById('delete-bar').classList.remove('show');
     document.getElementById('input-bar').style.display = 'flex';
 }
@@ -1011,7 +1109,7 @@ function clearAllChats() {
 }
 
 /* ════════════════════════════════════════
-   READ RECEIPTS (BLUE TICK LOGIC)
+   READ RECEIPTS
 ════════════════════════════════════════ */
 function markMsgRead(key) {
     if (!msgsRef || !myUid) return;
