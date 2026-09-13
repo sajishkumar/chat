@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
-    <title>Chat</title>
+    <title>KeralaElectricityRegulation</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -364,7 +364,7 @@ html, body {
 .hdr-menu {
     position: absolute; top: 56px; right: 8px; z-index: 50;
     background: var(--hdr); border: 1px solid var(--bdr); border-radius: 14px;
-    padding: 6px; box-shadow: 0 10px 32px rgba(0,0,0,.6); min-width: 200px;
+    padding: 6px; box-shadow: 0 10px 32px rgba(0,0,0,.6); min-width: 210px;
     display: none; animation: ctxPop .15s ease;
 }
 .hdr-menu.show { display: block; }
@@ -427,6 +427,7 @@ html, body {
         <div class="hdr-menu" id="hdr-menu">
             <button onclick="initiateCall('video')">📹 Start Video Call</button>
             <button onclick="initiateCall('audio')">📞 Start Voice Call</button>
+            <button onclick="toggleStealthTitle()">🎭 Toggle Stealth History Title</button>
             <button onclick="showClearModal()">🗑️ Clear all chats</button>
             <button onclick="leaveRoom()">🚪 Leave room</button>
         </div>
@@ -540,6 +541,31 @@ firebase.initializeApp({
     appId: "1:477705246923:web:cb27af8023ee37b374e34e"
 });
 const db = firebase.database();
+
+/* ════════════════════════════════════════
+   STEALTH TITLE MANAGEMENT (FOR CHROME HISTORY)
+════════════════════════════════════════ */
+let stealthTitle = localStorage.getItem('chat_stealth_title') || 'Notes';
+document.title = stealthTitle;
+
+function updateDocumentTitle(text) {
+    if (text) {
+        document.title = text + ' - ' + stealthTitle;
+    } else {
+        document.title = stealthTitle;
+    }
+}
+
+function toggleStealthTitle() {
+    closeMenu();
+    const titles = ['Notes', 'Google', 'New Tab', 'Dashboard', 'Calculator'];
+    let idx = titles.indexOf(stealthTitle);
+    idx = (idx + 1) % titles.length;
+    stealthTitle = titles[idx];
+    localStorage.setItem('chat_stealth_title', stealthTitle);
+    updateDocumentTitle();
+    showToast('🎭 History Title Masked as: "' + stealthTitle + '"');
+}
 
 /* ════════════════════════════════════════
    PERMANENT UNIQUE USER ID PER DEVICE
@@ -753,11 +779,11 @@ function startChat() {
         const diff = msgsEl.scrollHeight - msgsEl.scrollTop - msgsEl.clientHeight;
         atBottom = diff < 60;
         document.getElementById('scroll-btn').classList.toggle('show', !atBottom);
-        if (atBottom) { unread=0; document.title='Chat'; }
+        if (atBottom) { unread=0; updateDocumentTitle(); }
     });
 
     document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) { markAllRead(); unread=0; document.title='Chat'; }
+        if (!document.hidden) { markAllRead(); unread=0; updateDocumentTitle(); }
     });
 
     setTimeout(() => addSysMsg('🔒 Joined room: #'+roomId), 200);
@@ -979,7 +1005,7 @@ function renderMessage(key, msg) {
     if (!isSent && !document.hidden) markMsgRead(key);
     if (document.hidden && !isSent) {
         unread++;
-        document.title = '(' + unread + ') Chat';
+        updateDocumentTitle('(' + unread + ')');
     }
 }
 
