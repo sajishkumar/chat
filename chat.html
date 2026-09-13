@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
-    <title>KeralaElectricityRegulation</title>
+    <title>KeralaElectricityRules</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -161,14 +161,23 @@ html, body {
 }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
-/* Bubble styling */
+/* Bubble styling — 2 distinct vibrant colors for Sent vs Received */
 .bubble {
     padding: 11px 16px; word-break: break-word; line-height: 1.5;
     font-size: 18px; position: relative; max-width: 100%;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25);
 }
-.sent .bubble { background: var(--sent-bg); border-radius: 18px 4px 18px 18px; color: #fff; text-align: left; }
-.recv .bubble { background: var(--recv-bg); border-radius: 4px 18px 18px 18px; color: var(--txt); text-align: left; }
-.sender-name { font-size: 14px; font-weight: 700; color: var(--grn); margin-bottom: 3px; padding-left: 2px; }
+.sent .bubble {
+    background: linear-gradient(135deg,#00796b,#005c4b);
+    border: 1px solid rgba(6,207,156,.25);
+    border-radius: 18px 4px 18px 18px; color: #ffffff; text-align: left;
+}
+.recv .bubble {
+    background: linear-gradient(135deg,#23313a,#1a242b);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 4px 18px 18px 18px; color: var(--txt); text-align: left;
+}
+.sender-name { font-size: 14px; font-weight: 700; color: #06cf9c; margin-bottom: 3px; padding-left: 2px; }
 
 /* ═══ REPLY / TAGGED QUOTE INSIDE BUBBLE ═══ */
 .reply-quote {
@@ -545,7 +554,7 @@ const db = firebase.database();
 /* ════════════════════════════════════════
    STEALTH TITLE MANAGEMENT (FOR CHROME HISTORY)
 ════════════════════════════════════════ */
-let stealthTitle = localStorage.getItem('chat_stealth_title') || 'Notes';
+let stealthTitle = localStorage.getItem('chat_stealth_title') || 'KeralaElectricityRules';
 document.title = stealthTitle;
 
 function updateDocumentTitle(text) {
@@ -558,7 +567,7 @@ function updateDocumentTitle(text) {
 
 function toggleStealthTitle() {
     closeMenu();
-    const titles = ['Notes', 'Google', 'New Tab', 'Dashboard', 'Calculator'];
+    const titles = ['KeralaElectricityRules', 'Notes', 'Google', 'New Tab', 'Dashboard', 'Calculator'];
     let idx = titles.indexOf(stealthTitle);
     idx = (idx + 1) % titles.length;
     stealthTitle = titles[idx];
@@ -615,34 +624,72 @@ document.getElementById('msg-input').addEventListener('focus', () => {
 });
 
 /* ════════════════════════════════════════
+   AUTO-EXIT & PRIVACY AUTO-LOCK LOGIC (ZERO TRACE)
+════════════════════════════════════════ */
+function exitSessionImmediately() {
+    const chatScreen = document.getElementById('chat-screen');
+    if (chatScreen && chatScreen.classList.contains('hidden')) return;
+
+    if (presRef) { try { presRef.remove(); } catch(e){} presRef = null; }
+    if (typingRef) { try { typingRef.remove(); } catch(e){} typingRef = null; }
+    if (msgsRef) { try { msgsRef.off(); } catch(e){} msgsRef = null; }
+    if (callRef) { try { callRef.off(); } catch(e){} callRef = null; }
+    
+    renderedKeys.clear();
+    lastDateShown = null;
+    
+    // Completely wipe all HTML & title so Chrome Recent Apps preview shows no chat trace
+    document.body.innerHTML = '';
+    document.title = 'Google';
+    localStorage.removeItem('chat_room');
+
+    // Attempt to close tab or replace URL with about:blank
+    try { window.close(); } catch(e){}
+    try { window.location.replace('about:blank'); } catch(e){}
+}
+
+// Mobile Hardware Back button & browser back button
+window.addEventListener('popstate', (e) => {
+    const chatScreen = document.getElementById('chat-screen');
+    if (chatScreen && !chatScreen.classList.contains('hidden')) {
+        exitSessionImmediately();
+    }
+});
+
+// App minimized, tab switched, or phone screen locked / sleep mode
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        exitSessionImmediately();
+    }
+});
+
+window.addEventListener('pagehide', () => {
+    exitSessionImmediately();
+});
+
+window.addEventListener('freeze', () => {
+    exitSessionImmediately();
+});
+
+/* ════════════════════════════════════════
    AUTO-LOGIN & INITIALIZATION
 ════════════════════════════════════════ */
 window.addEventListener('load', () => {
     const savedName = localStorage.getItem('chat_name');
     const urlRoom = new URLSearchParams(location.search).get('room');
-    const savedRoom = localStorage.getItem('chat_room');
-    const room = urlRoom || savedRoom;
 
-    // Set room code input field default from URL parameter or saved room
+    // Strict Rule: ONLY auto-join room if opened via explicit room link (?room=...)
     if (urlRoom) {
         document.getElementById('inp-room').value = urlRoom;
-    } else if (savedRoom) {
-        document.getElementById('inp-room').value = savedRoom;
-    }
-
-    if (savedName && room) {
-        myName = savedName;
-        roomId = room.toLowerCase().replace(/[^a-z0-9\-_]/g,'-');
-        localStorage.setItem('chat_room', roomId);
-        const url = new URL(location.href);
-        url.searchParams.set('room', roomId);
-        history.replaceState({}, '', url);
-        startChat();
-        return;
+        if (savedName) {
+            myName = savedName;
+            roomId = urlRoom.toLowerCase().replace(/[^a-z0-9\-_]/g,'-');
+            startChat();
+            return;
+        }
     }
 
     if (savedName) document.getElementById('inp-name').value = savedName;
-    if (room) document.getElementById('inp-room').value = room;
 
     document.getElementById('inp-name').addEventListener('keydown', e => {
         if (e.key==='Enter') document.getElementById('inp-room').focus();
@@ -676,6 +723,11 @@ function startChat() {
 
     document.getElementById('setup-screen').classList.add('hidden');
     document.getElementById('chat-screen').classList.remove('hidden');
+
+    // Push state so mobile back button triggers popstate auto-exit
+    if (!history.state || !history.state.inChat) {
+        history.pushState({ inChat: true }, '', location.href);
+    }
 
     adjustViewport();
     setTimeout(() => document.getElementById('msg-input').focus(), 300);
@@ -780,10 +832,6 @@ function startChat() {
         atBottom = diff < 60;
         document.getElementById('scroll-btn').classList.toggle('show', !atBottom);
         if (atBottom) { unread=0; updateDocumentTitle(); }
-    });
-
-    document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) { markAllRead(); unread=0; updateDocumentTitle(); }
     });
 
     setTimeout(() => addSysMsg('🔒 Joined room: #'+roomId), 200);
@@ -1191,14 +1239,8 @@ function handleKey(e) { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(
 
 function leaveRoom() {
     closeMenu();
-    if(presRef){presRef.remove();presRef=null;}
-    if(typingRef){typingRef.remove();typingRef=null;}
-    if(msgsRef){msgsRef.off();msgsRef=null;}
-    renderedKeys.clear(); lastDateShown=null;
-    document.getElementById('msgs').innerHTML='';
-    document.getElementById('chat-screen').classList.add('hidden');
-    document.getElementById('setup-screen').classList.remove('hidden');
-    localStorage.removeItem('chat_room');
+    exitSessionImmediately();
+    showToast('🚪 Left room');
 }
 
 function showToast(msg, dur=3000) {
