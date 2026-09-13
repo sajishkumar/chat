@@ -146,28 +146,45 @@ html, body {
     margin: 4px 0; text-align: center; max-width: 88%; animation: fadeUp .2s ease;
 }
 
-/* Message rows */
-.msg-row { display: flex; flex-direction: column; max-width: 85%; animation: fadeUp .2s ease; position: relative; margin-bottom: 2px; }
-.msg-row.sent { align-self: flex-end; align-items: flex-end; }
-.msg-row.recv { align-self: flex-start; align-items: flex-start; }
+/* ═══ SENT (RIGHT) vs RECV (LEFT) ALIGNMENT ═══ */
+.msg-row {
+    display: flex; flex-direction: column; max-width: 85%;
+    animation: fadeUp .2s ease; position: relative; margin-bottom: 2px;
+}
+.msg-row.sent {
+    align-self: flex-end !important;
+    align-items: flex-end !important;
+}
+.msg-row.recv {
+    align-self: flex-start !important;
+    align-items: flex-start !important;
+}
 @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
-/* ═══ LARGER TEXT SIZE BUBBLE ═══ */
+/* Bubble styling */
 .bubble {
     padding: 11px 16px; word-break: break-word; line-height: 1.5;
-    font-size: 18px; /* INCREASED TEXT SIZE */
-    position: relative; max-width: 100%;
+    font-size: 18px; position: relative; max-width: 100%;
 }
-.sent .bubble { background: var(--sent-bg); border-radius: 18px 4px 18px 18px; color: #fff; }
-.recv .bubble { background: var(--recv-bg); border-radius: 4px 18px 18px 18px; color: var(--txt); }
+.sent .bubble { background: var(--sent-bg); border-radius: 18px 4px 18px 18px; color: #fff; text-align: left; }
+.recv .bubble { background: var(--recv-bg); border-radius: 4px 18px 18px 18px; color: var(--txt); text-align: left; }
 .sender-name { font-size: 14px; font-weight: 700; color: var(--grn); margin-bottom: 3px; padding-left: 2px; }
+
 .bubble-meta {
     font-size: 12px; color: var(--txt2); margin-top: 4px; padding: 0 3px;
     display: flex; align-items: center; gap: 4px;
 }
 .sent .bubble-meta { justify-content: flex-end; color: rgba(255,255,255,.75); }
-.tick { font-size: 15px; color: rgba(255,255,255,.65); transition: color .3s; }
-.tick.read { color: var(--blue); }
+
+/* ═══ BLUE TICK STYLING ═══ */
+.tick {
+    font-size: 15px; color: rgba(255,255,255,.65);
+    display: inline-block; margin-left: 3px; transition: color .2s ease;
+}
+.tick.read {
+    color: #34b7f1 !important; /* BRIGHT BLUE DOUBLE TICK */
+    font-weight: 700;
+}
 
 .msg-row.selected .bubble { outline: 2px solid var(--grn); outline-offset: 2px; }
 .msg-row.deleted .bubble {
@@ -242,8 +259,7 @@ html, body {
 }
 #msg-input {
     flex: 1; background: none; border: none; outline: none; color: var(--txt);
-    font-size: 18px; /* LARGER INPUT FONT */
-    font-family: var(--fn); resize: none; line-height: 1.4;
+    font-size: 18px; font-family: var(--fn); resize: none; line-height: 1.4;
     max-height: 120px; scrollbar-width: none;
 }
 #msg-input::placeholder { color: var(--txt3); }
@@ -283,17 +299,11 @@ html, body {
 .modal-btns .m-call { background: linear-gradient(135deg,#00a884,#128c7e); color: #fff; }
 
 /* Full Media View Modal */
-#full-media-modal {
-    flex-direction: column; gap: 16px;
-}
-#full-media-img {
-    max-width: 95vw; max-height: 80vh; border-radius: 12px; object-fit: contain;
-}
+#full-media-modal { flex-direction: column; gap: 16px; }
+#full-media-img { max-width: 95vw; max-height: 80vh; border-radius: 12px; object-fit: contain; }
 
 /* Call Ringing Modal */
-.call-ring-card {
-    display: flex; flex-direction: column; align-items: center; gap: 16px;
-}
+.call-ring-card { display: flex; flex-direction: column; align-items: center; gap: 16px; }
 .call-avatar-ring {
     width: 90px; height: 90px; border-radius: 50%;
     background: linear-gradient(135deg,#00a884,#128c7e);
@@ -497,11 +507,11 @@ firebase.initializeApp({
 const db = firebase.database();
 
 /* ════════════════════════════════════════
-   PERMANENT USER ID & STATE
+   PERMANENT UNIQUE USER ID PER DEVICE
 ════════════════════════════════════════ */
 let myUid = localStorage.getItem('chat_uid');
 if (!myUid) {
-    myUid = 'u_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36);
+    myUid = 'u_' + Math.random().toString(36).slice(2,10) + '_' + Date.now();
     localStorage.setItem('chat_uid', myUid);
 }
 
@@ -513,7 +523,6 @@ let renderedKeys = new Set();
 let selectedKey = null;
 let selectedIsSent = false;
 let currentCallData = null;
-let activeCallType = 'video';
 
 /* ════════════════════════════════════════
    MOBILE KEYBOARD VIEWPORT FIX
@@ -623,7 +632,7 @@ function startChat() {
         if (msg) renderMessage(snap.key, msg);
     });
 
-    // Message edit/delete/read updates
+    // Real-time updates for delete & BLUE TICK read status
     msgsRef.on('child_changed', snap => {
         const msg = snap.val();
         const key = snap.key;
@@ -635,14 +644,21 @@ function startChat() {
             el.querySelector('.bubble').innerHTML = '🚫 <i>Message deleted</i>';
             const sn = el.querySelector('.sender-name');
             if (sn) sn.remove();
+            return;
         }
 
-        const isSent = (msg.uid === myUid) || (msg.name && msg.name.trim().toLowerCase() === myName.trim().toLowerCase());
-        if (msg.readBy && isSent) {
-            const tick = el.querySelector('.tick');
-            if (tick && Object.keys(msg.readBy).some(uid => uid !== myUid)) {
-                tick.textContent = '✓✓';
-                tick.classList.add('read');
+        // Check if message is sent by me
+        const isSent = msg.uid ? (msg.uid === myUid) : (msg.name && myName && msg.name.trim().toLowerCase() === myName.trim().toLowerCase());
+        
+        // Update Blue Double Tick when recipient reads it
+        if (isSent && msg.readBy) {
+            const hasOtherReader = Object.keys(msg.readBy).some(uid => uid !== myUid);
+            if (hasOtherReader) {
+                const tick = el.querySelector('.tick');
+                if (tick) {
+                    tick.textContent = '✓✓';
+                    tick.classList.add('read');
+                }
             }
         }
     });
@@ -736,7 +752,6 @@ function handleFileSelect(e) {
     const isVid = file.type.startsWith('video/');
 
     if (isImg) {
-        // Compress image using Canvas
         const reader = new FileReader();
         reader.onload = function(evt) {
             const img = new Image();
@@ -763,7 +778,7 @@ function handleFileSelect(e) {
             img.src = evt.target.result;
         };
         reader.readAsDataURL(file);
-    } else if (isVid || file.size < 5 * 1024 * 1024) { // Files under 5MB
+    } else if (isVid || file.size < 5 * 1024 * 1024) {
         const reader = new FileReader();
         reader.onload = function(evt) {
             const dataUrl = evt.target.result;
@@ -784,14 +799,16 @@ function handleFileSelect(e) {
 }
 
 /* ════════════════════════════════════════
-   RENDER MESSAGE (FIX: Sent/Recv & Media)
+   RENDER MESSAGE (EXACT SENT vs RECV & BLUE TICK)
 ════════════════════════════════════════ */
 function renderMessage(key, msg) {
     if (renderedKeys.has(key)) return;
     renderedKeys.add(key);
 
     const msgs = document.getElementById('msgs');
-    const isSent = (msg.uid === myUid) || (msg.name && myName && msg.name.trim().toLowerCase() === myName.trim().toLowerCase());
+    
+    // STRICT CHECK: Determine if sent by me (using myUid primarily)
+    const isSent = msg.uid ? (msg.uid === myUid) : (msg.name && myName && msg.name.trim().toLowerCase() === myName.trim().toLowerCase());
     
     const ts = msg.ts || Date.now();
     const date = new Date(ts);
@@ -818,10 +835,13 @@ function renderMessage(key, msg) {
     const isDeleted = msg.deleted;
     if (isDeleted) row.classList.add('deleted');
 
+    // Blue tick calculation
     let tickClass = 'tick', tickText = '✓';
     if (isSent && msg.readBy) {
-        if (Object.keys(msg.readBy).some(uid => uid !== myUid)) {
-            tickClass = 'tick read'; tickText = '✓✓';
+        const hasOtherReader = Object.keys(msg.readBy).some(uid => uid !== myUid);
+        if (hasOtherReader) {
+            tickClass = 'tick read';
+            tickText = '✓✓';
         }
     }
 
@@ -859,6 +879,7 @@ function renderMessage(key, msg) {
     msgs.appendChild(row);
     scrollToBottomIfNear();
 
+    // Mark incoming messages as read automatically
     if (!isSent && !document.hidden) markMsgRead(key);
     if (document.hidden && !isSent) {
         unread++;
@@ -927,7 +948,6 @@ function deleteForEveryone() {
 ════════════════════════════════════════ */
 function initiateCall(type) {
     closeMenu();
-    activeCallType = type;
     if (callRef) {
         callRef.set({
             callerName: myName,
@@ -963,10 +983,8 @@ function declineCall() {
 function launchJitsiCall() {
     closeCallOptionModal();
     document.getElementById('incoming-call-modal').classList.remove('show');
-    
     const jitsiRoom = 'p2p-chat-' + roomId.replace(/[^a-zA-Z0-9]/g, '');
     const jitsiUrl = `https://meet.jit.si/${jitsiRoom}#userInfo.displayName="${encodeURIComponent(myName)}"`;
-    
     window.open(jitsiUrl, '_blank');
     addSysMsg('📞 Started call in room: ' + jitsiRoom);
 }
@@ -993,12 +1011,13 @@ function clearAllChats() {
 }
 
 /* ════════════════════════════════════════
-   READ RECEIPTS
+   READ RECEIPTS (BLUE TICK LOGIC)
 ════════════════════════════════════════ */
 function markMsgRead(key) {
-    if (!msgsRef) return;
+    if (!msgsRef || !myUid) return;
     msgsRef.child(key).child('readBy').child(myUid).set(true);
 }
+
 function markAllRead() {
     document.querySelectorAll('.msg-row.recv').forEach(row => {
         const key = row.dataset.key;
