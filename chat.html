@@ -168,14 +168,14 @@ html, body {
     box-shadow: 0 2px 8px rgba(0,0,0,.25);
 }
 .sent .bubble {
-    background: linear-gradient(135deg,#00796b,#005c4b);
-    border: 1px solid rgba(6,207,156,.25);
-    border-radius: 18px 4px 18px 18px; color: #ffffff; text-align: left;
+    background: linear-gradient(135deg, #00695c, #004d40) !important;
+    border: 1.5px solid #00bfa5 !important;
+    border-radius: 18px 4px 18px 18px; color: #ffffff !important; text-align: left;
 }
 .recv .bubble {
-    background: linear-gradient(135deg,#23313a,#1a242b);
-    border: 1px solid rgba(255,255,255,.1);
-    border-radius: 4px 18px 18px 18px; color: var(--txt); text-align: left;
+    background: linear-gradient(135deg, #1e293b, #0f172a) !important;
+    border: 1.5px solid #334155 !important;
+    border-radius: 4px 18px 18px 18px; color: #f8fafc !important; text-align: left;
 }
 .sender-name { font-size: 14px; font-weight: 700; color: #06cf9c; margin-bottom: 3px; padding-left: 2px; }
 
@@ -769,7 +769,17 @@ function startChat() {
             return;
         }
 
-        const isSent = msg.uid ? (msg.uid === myUid) : (msg.name && myName && msg.name.trim().toLowerCase() === myName.trim().toLowerCase());
+        const msgUid = msg.uid ? String(msg.uid).trim() : '';
+        const currentUid = myUid ? String(myUid).trim() : '';
+        const msgName = msg.name ? String(msg.name).trim().toLowerCase() : '';
+        const currentName = myName ? String(myName).trim().toLowerCase() : '';
+
+        let isSent = false;
+        if (msgUid && currentUid && msgUid === currentUid) {
+            isSent = true;
+        } else if (msgName && currentName && msgName === currentName) {
+            isSent = true;
+        }
         
         if (isSent && msg.readBy) {
             const hasOtherReader = Object.keys(msg.readBy).some(uid => uid !== myUid);
@@ -968,7 +978,19 @@ function renderMessage(key, msg) {
     renderedKeys.add(key);
 
     const msgs = document.getElementById('msgs');
-    const isSent = msg.uid ? (msg.uid === myUid) : (msg.name && myName && msg.name.trim().toLowerCase() === myName.trim().toLowerCase());
+    
+    // Robust check for Sent vs Received on reload
+    const msgUid = msg.uid ? String(msg.uid).trim() : '';
+    const currentUid = myUid ? String(myUid).trim() : '';
+    const msgName = msg.name ? String(msg.name).trim().toLowerCase() : '';
+    const currentName = myName ? String(myName).trim().toLowerCase() : '';
+
+    let isSent = false;
+    if (msgUid && currentUid && msgUid === currentUid) {
+        isSent = true;
+    } else if (msgName && currentName && msgName === currentName) {
+        isSent = true;
+    }
     
     const ts = msg.ts || Date.now();
     const date = new Date(ts);
