@@ -653,19 +653,28 @@ function exitSessionImmediately() {
     }
 }
 
-// Double Hardware Back Button to Exit logic (Direct tab close, no warning toast)
+let backTapCount = 0;
+let backTapTimer = null;
+
+// Double Hardware Back Button to Exit logic (Redirects to Google Gemini on double tap)
 window.addEventListener('popstate', (e) => {
     const chatScreen = document.getElementById('chat-screen');
-    if (chatScreen && !chatScreen.classList.contains('hidden')) {
-        const now = Date.now();
-        if (now - lastBackPressTime < 2000) {
-            // Second back press within 2 seconds -> Direct browser tab close!
-            exitSessionImmediately();
-        } else {
-            // First back press -> Quietly absorb tap & save history state
-            lastBackPressTime = now;
-            history.pushState({ inChat: true }, '', location.href);
-        }
+    if (!chatScreen || chatScreen.classList.contains('hidden')) return;
+
+    // Lock Chrome history stack on single back tap so Chrome never exits page on tap 1
+    history.pushState({ inChat: true, trap: true }, '', location.href);
+
+    backTapCount++;
+    if (backTapCount >= 2) {
+        backTapCount = 0;
+        clearTimeout(backTapTimer);
+        // Double tap confirmed -> Redirect directly to Google Gemini!
+        exitSessionImmediately();
+    } else {
+        clearTimeout(backTapTimer);
+        backTapTimer = setTimeout(() => {
+            backTapCount = 0;
+        }, 1500);
     }
 });
 
@@ -740,10 +749,9 @@ function startChat() {
     document.getElementById('setup-screen').classList.add('hidden');
     document.getElementById('chat-screen').classList.remove('hidden');
 
-    // Push state so mobile back button triggers popstate auto-exit
-    if (!history.state || !history.state.inChat) {
-        history.pushState({ inChat: true }, '', location.href);
-    }
+    // Push dual history trap states so single back tap never leaves page
+    history.pushState({ inChat: true, trap: 1 }, '', location.href);
+    history.pushState({ inChat: true, trap: 2 }, '', location.href);
 
     adjustViewport();
     setTimeout(() => document.getElementById('msg-input').focus(), 300);
