@@ -595,6 +595,8 @@ let selectedMsgData = null;
 let selectedIsSent = false;
 let currentCallData = null;
 let replyTarget = null; // Tagged / Replied message object
+let isSelectingFile = false; // Flag to prevent auto-exit when picking image/video/file
+let lastBackPressTime = 0; // Timestamp for double back tap exit
 
 /* ════════════════════════════════════════
    MOBILE KEYBOARD VIEWPORT FIX
@@ -638,36 +640,50 @@ function exitSessionImmediately() {
     renderedKeys.clear();
     lastDateShown = null;
     
-    // Completely wipe all HTML & title so Chrome Recent Apps preview shows no chat trace
+    // Completely wipe HTML & set title to Gemini
     document.body.innerHTML = '';
-    document.title = 'Google';
+    document.title = 'Gemini';
     localStorage.removeItem('chat_room');
 
-    // Attempt to close tab or replace URL with about:blank
-    try { window.close(); } catch(e){}
-    try { window.location.replace('about:blank'); } catch(e){}
+    // Immediately redirect browser page directly to Google Gemini
+    try {
+        window.location.replace('https://gemini.google.com');
+    } catch(e) {
+        window.location.href = 'https://gemini.google.com';
+    }
 }
 
-// Mobile Hardware Back button & browser back button
+// Double Hardware Back Button to Exit logic (Direct tab close, no warning toast)
 window.addEventListener('popstate', (e) => {
     const chatScreen = document.getElementById('chat-screen');
     if (chatScreen && !chatScreen.classList.contains('hidden')) {
-        exitSessionImmediately();
+        const now = Date.now();
+        if (now - lastBackPressTime < 2000) {
+            // Second back press within 2 seconds -> Direct browser tab close!
+            exitSessionImmediately();
+        } else {
+            // First back press -> Quietly absorb tap & save history state
+            lastBackPressTime = now;
+            history.pushState({ inChat: true }, '', location.href);
+        }
     }
 });
 
 // App minimized, tab switched, or phone screen locked / sleep mode
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
+        if (isSelectingFile) return; // Do NOT exit when selecting attachment
         exitSessionImmediately();
     }
 });
 
 window.addEventListener('pagehide', () => {
+    if (isSelectingFile) return;
     exitSessionImmediately();
 });
 
 window.addEventListener('freeze', () => {
+    if (isSelectingFile) return;
     exitSessionImmediately();
 });
 
@@ -897,10 +913,19 @@ function cancelReply() {
 }
 
 function triggerFileSelect() {
+    isSelectingFile = true;
+    window.addEventListener('focus', resetFileSelecting, { once: true });
     document.getElementById('file-input').click();
 }
 
+function resetFileSelecting() {
+    setTimeout(() => {
+        isSelectingFile = false;
+    }, 1200);
+}
+
 function handleFileSelect(e) {
+    resetFileSelecting();
     const file = e.target.files[0];
     if (!file) return;
 
