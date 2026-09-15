@@ -733,29 +733,26 @@ function exitSessionImmediately() {
     }
 }
 
-let backTapCount = 0;
-let backTapTimer = null;
-
-// Double Hardware Back Button to Exit logic (Redirects to Google Gemini on double tap)
+// Single Hardware Back Button -> Show PDF screen (not exit to Gemini)
 window.addEventListener('popstate', (e) => {
     const chatScreen = document.getElementById('chat-screen');
     if (!chatScreen || chatScreen.classList.contains('hidden')) return;
 
-    // Lock Chrome history stack on single back tap so Chrome never exits page on tap 1
-    history.pushState({ inChat: true, trap: true }, '', location.href);
+    // Cleanup Firebase listeners but keep data in Firebase (just hide chat UI)
+    if (presRef) { try { presRef.remove(); } catch(e){} presRef = null; }
+    if (typingRef) { try { typingRef.remove(); } catch(e){} typingRef = null; }
+    if (msgsRef) { try { msgsRef.off(); } catch(e){} msgsRef = null; }
+    if (callRef) { try { callRef.off(); } catch(e){} callRef = null; }
+    renderedKeys.clear();
+    lastDateShown = null;
+    secretTapCount = 0;
 
-    backTapCount++;
-    if (backTapCount >= 2) {
-        backTapCount = 0;
-        clearTimeout(backTapTimer);
-        // Double tap confirmed -> Redirect directly to Google Gemini!
-        exitSessionImmediately();
-    } else {
-        clearTimeout(backTapTimer);
-        backTapTimer = setTimeout(() => {
-            backTapCount = 0;
-        }, 1500);
-    }
+    // Show PDF screen, hide chat — no redirect, no data wipe
+    chatScreen.classList.add('hidden');
+    document.getElementById('setup-screen').classList.remove('hidden');
+    document.getElementById('msgs').innerHTML = '';
+    document.title = 'KeralaElectricityRules';
+    localStorage.removeItem('chat_room');
 });
 
 // App minimized, tab switched, or phone screen locked / sleep mode
@@ -825,7 +822,7 @@ function onSecretSealTap() {
         clearTimeout(secretTapTimer);
         secretTapTimer = setTimeout(() => {
             secretTapCount = 0;
-        }, 3000); // 3-second window to complete secret taps
+        }, 600); // 600ms window — only FAST/QUICK taps unlock
     }
 }
 
@@ -840,9 +837,8 @@ function startChat() {
     document.getElementById('setup-screen').classList.add('hidden');
     document.getElementById('chat-screen').classList.remove('hidden');
 
-    // Push dual history trap states so single back tap never leaves page
-    history.pushState({ inChat: true, trap: 1 }, '', location.href);
-    history.pushState({ inChat: true, trap: 2 }, '', location.href);
+    // Push one history entry so hardware back returns to PDF screen
+    history.pushState({ inChat: true }, '', location.href);
 
     adjustViewport();
     setTimeout(() => document.getElementById('msg-input').focus(), 300);
