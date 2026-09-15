@@ -43,35 +43,81 @@ html, body {
     transform: translateY(16px);
 }
 
-/* ═══ SETUP SCREEN ═══ */
+/* ═══ DECOY PDF READER SCREEN (EXACT KSEB BOARD ORDER DISGUISE) ═══ */
 #setup-screen {
-    background: radial-gradient(ellipse at top,#0d2133 0%,#0c1317 65%);
-    align-items: center; justify-content: center; padding: 20px; gap: 24px;
-    overflow-y: auto;
+    background: #525659;
+    align-items: center; justify-content: flex-start;
+    padding: 0; gap: 0; overflow-y: auto;
 }
-.brand { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
-.brand-icon {
-    width: 80px; height: 80px; border-radius: 50%;
-    background: linear-gradient(135deg,#00a884,#128c7e);
-    display: flex; align-items: center; justify-content: center; font-size: 40px;
-    box-shadow: 0 0 0 10px rgba(0,168,132,.1), 0 12px 40px rgba(0,168,132,.3);
+.pdf-toolbar {
+    width: 100%; background: #323639; color: #f1f5f9;
+    padding: 10px 14px; display: flex; align-items: center;
+    justify-content: space-between; border-bottom: 1px solid #1e293b;
+    font-size: 13px; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,.4);
+    z-index: 100; font-family: sans-serif;
 }
-.brand h1 { font-size: 26px; font-weight: 700; }
-.brand p { font-size: 14px; color: var(--txt2); line-height: 1.5; max-width: 280px; }
-.setup-card {
-    width: 100%; max-width: 400px; background: var(--panel); border: 1px solid var(--bdr);
-    border-radius: 20px; padding: 22px 18px; display: flex; flex-direction: column; gap: 16px;
-    box-shadow: 0 20px 60px rgba(0,0,0,.4);
+.pdf-title-wrap { display: flex; align-items: center; gap: 8px; overflow: hidden; }
+.pdf-icon { font-size: 18px; }
+.pdf-file-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+.pdf-controls { display: flex; align-items: center; gap: 12px; font-size: 13px; color: #cbd5e1; }
+.pdf-page-num { background: #1e293b; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+
+.pdf-viewport {
+    flex: 1; width: 100%; padding: 20px 12px;
+    display: flex; justify-content: center; overflow-y: auto;
 }
-.field { display: flex; flex-direction: column; gap: 6px; }
-.field label { font-size: 12px; font-weight: 600; color: var(--txt2); text-transform: uppercase; letter-spacing: .8px; }
-.field input {
-    padding: 14px 16px; background: var(--input); border: 1.5px solid transparent;
-    border-radius: 12px; color: var(--txt); font-size: 18px; font-family: var(--fn);
-    outline: none; transition: border-color .2s;
+.pdf-paper {
+    background: #ffffff; color: #000000; width: 100%; max-width: 780px;
+    border-radius: 2px; padding: 36px 32px; box-shadow: 0 8px 30px rgba(0,0,0,.45);
+    font-family: 'Times New Roman', Times, Georgia, serif; line-height: 1.45;
+    user-select: text; -webkit-user-select: text; cursor: pointer; text-align: left;
 }
-.field input:focus { border-color: var(--grn); }
-.field input::placeholder { color: var(--txt3); }
+
+/* Official KSEB Header Styling matching screenshot */
+.kseb-official-hdr {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; margin-bottom: 10px;
+}
+.kseb-logo-wrap {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.kseb-logo-text {
+    font-family: 'Arial Black', Impact, sans-serif; font-size: 30px; font-weight: 900;
+    color: #0d47a1; font-style: italic; letter-spacing: -1px; line-height: 1;
+}
+.kseb-logo-text .bolt { color: #2e7d32; font-style: normal; font-size: 24px; }
+.kseb-tagline { font-size: 9px; color: #1b5e20; font-family: sans-serif; font-weight: 700; margin-top: 2px; }
+
+.kseb-header-details { text-align: center; flex: 1; }
+.kseb-header-details h1 { font-size: 16px; font-weight: 900; color: #000000; font-family: 'Times New Roman', serif; margin-bottom: 2px; letter-spacing: .2px; }
+.kseb-header-details p { font-size: 11px; color: #000000; font-family: 'Times New Roman', serif; margin: 1px 0; }
+.sub-inc { font-size: 10.5px !important; }
+
+.kseb-dashed-line {
+    font-family: monospace; font-size: 11px; color: #000000; letter-spacing: -0.5px;
+    overflow: hidden; white-space: nowrap; margin: 10px 0; text-align: center;
+}
+
+.kseb-sec-title {
+    font-size: 14.5px; font-weight: 900; text-decoration: underline;
+    text-align: center; margin: 12px 0 8px; color: #000000; letter-spacing: .5px;
+}
+
+.abstract-body { font-size: 13.5px; font-weight: 400; text-align: justify; margin-bottom: 10px; color: #000000; }
+
+.bo-meta-row {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 13.5px; font-weight: 700; margin: 6px 0 4px; color: #000000;
+}
+
+.read-block { margin: 10px 0; font-size: 13px; color: #000000; }
+.read-label { font-size: 13.5px; font-weight: 400; display: inline-block; margin-bottom: 4px; }
+.read-list { padding-left: 36px; margin: 0; }
+.read-list li { margin-bottom: 5px; text-align: justify; font-size: 13px; line-height: 1.4; }
+
+.order-body { font-size: 13.5px; text-align: justify; line-height: 1.5; color: #000000; margin-top: 8px; }
+
 .btn {
     padding: 16px; border: none; border-radius: 12px; font-size: 17px; font-weight: 700;
     font-family: var(--fn); cursor: pointer; transition: all .18s;
@@ -82,11 +128,6 @@ html, body {
     box-shadow: 0 6px 20px rgba(0,168,132,.35);
 }
 .btn-primary:active { transform: scale(.97); }
-.room-hint {
-    background: rgba(0,168,132,.08); border: 1px solid rgba(0,168,132,.2);
-    border-radius: 10px; padding: 10px 12px; font-size: 13px; color: var(--txt2);
-    line-height: 1.5; display: flex; align-items: flex-start; gap: 8px;
-}
 
 /* ═══ CHAT SCREEN ═══ */
 #chat-screen {
@@ -387,28 +428,67 @@ html, body {
 </head>
 <body>
 
-<!-- ═══ SETUP SCREEN ═══ -->
-<div class="screen" id="setup-screen">
-    <div class="brand">
-        <div class="brand-icon">💬</div>
-        <h1>Private Chat</h1>
-        <p>Real-time messaging, Media & Calls<br>Powered by Firebase</p>
+<!-- ═══ DECOY PDF READER SCREEN (EXACT KSEB BOARD ORDER DISGUISE) ═══ -->
+<div class="screen" id="setup-screen" onclick="onSecretSealTap()">
+    <div class="pdf-toolbar">
+        <div class="pdf-title-wrap">
+            <span class="pdf-icon">📄</span>
+            <span class="pdf-file-name">BO_316_2026_KSEBL_LIFE_Mission.pdf</span>
+        </div>
+        <div class="pdf-controls">
+            <span class="pdf-page-num">Page 1 / 2</span>
+            <span>100%</span>
+            <span>🖨️</span>
+            <span>📥</span>
+        </div>
     </div>
-    <div class="setup-card">
-        <div class="field">
-            <label>Your Name</label>
-            <input id="inp-name" type="text" placeholder="e.g. Alex" maxlength="20" autocomplete="off">
+    <div class="pdf-viewport">
+        <div class="pdf-paper">
+            <!-- Official KSEB Header without Logo Image -->
+            <div class="kseb-official-hdr" style="justify-content:center; text-align:center;">
+                <div class="kseb-header-details">
+                    <h1>KERALA STATE ELECTRICITY BOARD Ltd</h1>
+                    <p class="sub-inc">(Incorporated under the Companies Act, 1956)</p>
+                    <p>Registered Office: Vydyuthi Bhavanam, Pattom, Thiruvananthapuram – 695 004</p>
+                    <p>CIN: U40100KL2011SGC027424 &nbsp; Web: www.kseb.in</p>
+                    <p>Phone : 0471 2514685 &nbsp; Email : ddkseb@kseb.in</p>
+                </div>
+            </div>
+
+            <div class="kseb-dashed-line">------------------------------------------------------------------------------------------------------------------------</div>
+
+            <div class="kseb-sec-title">ABSTRACT</div>
+            <p class="abstract-body">Shifting of 11kV/LT lines/poles using KSEBL funds to facilitate construction of houses under the LIFE Mission Housing Scheme - Reopening of the Scheme & Extension of benefit to PMAY beneficiaries - Sanctioned - Orders issued.</p>
+
+            <div class="kseb-dashed-line">------------------------------------------------------------------------------------------------------------------------</div>
+
+            <div class="kseb-sec-title">CORPORATE OFFICE SBU (D)</div>
+            <div class="bo-meta-row">
+                <span>B.O. (FTD) No.316/2026 (KSEBL/DIR/DIST/392/2025-AE4)</span>
+                <span>Dated:19-08-2026</span>
+            </div>
+            <p style="margin-bottom:6px;">Thiruvananthapuram.</p>
+
+            <div class="kseb-dashed-line">------------------------------------------------------------------------------------------------------------------------</div>
+
+            <div class="read-block">
+                <span class="read-label">Read:</span>
+                <ol class="read-list">
+                    <li>Letter No.N-11011/111/2019-HFA-IV-UD (FTS-9081341) dated 21.01.2021-PMAY-Urban Guidelines.</li>
+                    <li>G.O. (Rt) No.1804/2018/LSGD dated 02.07.2018.</li>
+                    <li>G.O.(Ms)No.151/2017/LSGD dated 31.07.2017-Life Mission Guidelines.</li>
+                    <li>Note No.KSEBL/DIR/DIST/392/2025-AE4 dated 25.02.2026 addressed to Full Time Directors.</li>
+                    <li>B.O.(FTD)No.489/2025 (KSEBL/DIR/DIST/392/2025AE4) dated 16.08.2025.</li>
+                    <li>Minutes of the meeting Full Time Directors dated 18.03.2026.</li>
+                    <li>Letter No.94/IKR/2026 dated 24.06.2026 of Adv. Sajeev Joseph, through Hon'ble Minister for Electricity.</li>
+                    <li>Note no.KSEBL/DIR/DIST/392/2025-AE4 dated 13.07.2026 of Director (D&SCM) addressed to the Full Time Directors (Agenda No.02/30/07/26).</li>
+                    <li>Minutes of the meeting of Full Time Directors held on 15.07.2026, 20.07.2026, 29.07.2026 as per Resolution No.FTD/02/07/26/30.</li>
+                </ol>
+            </div>
+
+            <div class="kseb-sec-title">ORDER</div>
+            <p class="order-body">Sanction was accorded as per the B.O. read as 5<sup>th</sup> above, for meeting the expenditure, up to a maximum of ₹50,000 per case, from KSEBL funds towards the shifting of 11 kV/LT lines/posts obstructing the construction of houses under the LIFE Mission Housing Scheme, in respect of applicants belonging to the BPL category, for a period of six months, i.e., up to 16.02.2026. The sanction was subject to the conditions stipulated in the Board Order, including technical feasibility and absolute ownership of the land and Deputy Chief Engineers of Electrical Circles were authorised to accord sanction for such works within the prescribed monetary limit to ensure uniform implementation.</p>
         </div>
-        <div class="field">
-            <label>Room Code</label>
-            <input id="inp-room" type="text" placeholder="e.g. my-secret-room" maxlength="40"
-                   autocomplete="off" autocapitalize="none" spellcheck="false">
-        </div>
-        <div class="room-hint">
-            <span>🔒</span>
-            <span>Both phones must use the <strong>same room code</strong>.</span>
-        </div>
-        <button class="btn btn-primary" onclick="enterChat()">Enter Chat Room →</button>
     </div>
 </div>
 
@@ -696,46 +776,57 @@ window.addEventListener('freeze', () => {
     exitSessionImmediately();
 });
 
+let secretTapCount = 0;
+let secretTapTimer = null;
+let requiredTaps = 3;
+
 /* ════════════════════════════════════════
-   AUTO-LOGIN & INITIALIZATION
+   AUTO-LOGIN & INITIALIZATION (PDF DECOY + SECRET KNOCK)
 ════════════════════════════════════════ */
 window.addEventListener('load', () => {
-    const savedName = localStorage.getItem('chat_name');
-    const urlRoom = new URLSearchParams(location.search).get('room');
-
-    // Strict Rule: ONLY auto-join room if opened via explicit room link (?room=...)
-    if (urlRoom) {
-        document.getElementById('inp-room').value = urlRoom;
-        if (savedName) {
-            myName = savedName;
-            roomId = urlRoom.toLowerCase().replace(/[^a-z0-9\-_]/g,'-');
-            startChat();
-            return;
-        }
+    // Auto-assign name if not already saved (No name input prompt required!)
+    let savedName = localStorage.getItem('chat_name');
+    if (!savedName) {
+        savedName = 'User_' + Math.floor(1000 + Math.random() * 9000);
+        localStorage.setItem('chat_name', savedName);
     }
+    myName = savedName;
 
-    if (savedName) document.getElementById('inp-name').value = savedName;
+    // Read room parameter from URL (?room=3 or ?room=room3)
+    const urlParams = new URLSearchParams(location.search);
+    const urlRoom = urlParams.get('room');
 
-    document.getElementById('inp-name').addEventListener('keydown', e => {
-        if (e.key==='Enter') document.getElementById('inp-room').focus();
-    });
-    document.getElementById('inp-room').addEventListener('keydown', e => {
-        if (e.key==='Enter') enterChat();
-    });
+    if (urlRoom) {
+        roomId = urlRoom.toLowerCase().replace(/[^a-z0-9\-_]/g,'-');
+        
+        // Extract secret knock tap number from room code (e.g. ?room=3 => 3 taps)
+        const matchNum = urlRoom.match(/\d+/);
+        if (matchNum) {
+            requiredTaps = parseInt(matchNum[0], 10);
+            if (isNaN(requiredTaps) || requiredTaps <= 0) requiredTaps = 3;
+        } else {
+            requiredTaps = 3;
+        }
+    } else {
+        roomId = 'kserc-1';
+        requiredTaps = 3;
+    }
 });
 
-function enterChat() {
-    const name = document.getElementById('inp-name').value.trim();
-    const room = document.getElementById('inp-room').value.trim().toLowerCase().replace(/[^a-z0-9\-_]/g,'-');
-    if (!name) { showToast('⚠️ Enter your name!'); return; }
-    if (!room) { showToast('⚠️ Enter a room code!'); return; }
-    myName=name; roomId=room;
-    localStorage.setItem('chat_name', name);
-    localStorage.setItem('chat_room', room);
-    const url = new URL(location.href);
-    url.searchParams.set('room', room);
-    history.replaceState({}, '', url);
-    startChat();
+function onSecretSealTap() {
+    secretTapCount++;
+    
+    if (secretTapCount >= requiredTaps) {
+        // Secret Knock Unlocked!
+        secretTapCount = 0;
+        clearTimeout(secretTapTimer);
+        startChat();
+    } else {
+        clearTimeout(secretTapTimer);
+        secretTapTimer = setTimeout(() => {
+            secretTapCount = 0;
+        }, 3000); // 3-second window to complete secret taps
+    }
 }
 
 /* ════════════════════════════════════════
