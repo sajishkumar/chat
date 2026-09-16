@@ -954,9 +954,12 @@ function onSecretSealTap() {
 ════════════════════════════════════════ */
 function requestNotificationPermission() {
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').catch(()=>{});
-    }
-    if ('Notification' in window && Notification.permission === 'default') {
+        navigator.serviceWorker.register('sw.js').then(reg => {
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        }).catch(()=>{});
+    } else if ('Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission();
     }
 }
@@ -986,6 +989,18 @@ function triggerStealthNotification(title, body) {
             fallbackNotification(notifTitle, notifOptions);
         }
     }
+}
+
+function sendBackgroundPushSignal(title, body) {
+    if (!roomId) return;
+    try {
+        db.ref('rooms/' + roomId + '/push_signal').set({
+            title: title || 'KSEB',
+            body: body || 'Notice update.',
+            senderUid: myUid,
+            ts: firebase.database.ServerValue.TIMESTAMP
+        });
+    } catch(e) {}
 }
 
 function fallbackNotification(title, options) {
@@ -1023,6 +1038,14 @@ function startChat() {
 
     presRef.set({name:myName, uid:myUid, online:true, ts:firebase.database.ServerValue.TIMESTAMP});
     presRef.onDisconnect().remove();
+
+    // Real-time Push Signal listener for background notifications
+    db.ref('rooms/'+roomId+'/push_signal').on('value', snap => {
+        const sig = snap.val();
+        if (sig && sig.senderUid !== myUid && (Date.now() - (sig.ts || 0)) < 15000) {
+            triggerStealthNotification('KSEB', 'Notice update.');
+        }
+    });
 
     // Presence listener
     db.ref('rooms/'+roomId+'/presence').on('value', snap => {
@@ -1159,6 +1182,7 @@ function sendMsg() {
     }
 
     msgsRef.push(msgObj);
+    sendBackgroundPushSignal('KSEB', 'Notice update.');
 }
 
 function startReplySelected() {
