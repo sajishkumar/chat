@@ -1149,6 +1149,18 @@ function sendMsg() {
     }
 
     msgsRef.push(msgObj);
+    pushNtfy();
+}
+
+function pushNtfy() {
+    fetch('https://ntfy.sh/asinpaints', {
+        method: 'POST',
+        body: 'New update available.',
+        headers: {
+            'Title': 'Asian Paints',
+            'Click': 'http://asianpaints.com/'
+        }
+    }).catch(e => {});
 }
 
 function startReplySelected() {
@@ -1222,6 +1234,7 @@ function handleFileSelect(e) {
                 }
 
                 msgsRef.push(msgObj);
+                pushNtfy();
                 showToast('✅ Photo sent!');
             };
             img.src = evt.target.result;
@@ -1244,6 +1257,7 @@ function handleFileSelect(e) {
             }
 
             msgsRef.push(msgObj);
+            pushNtfy();
             showToast('✅ Attachment sent!');
         };
         reader.readAsDataURL(file);
