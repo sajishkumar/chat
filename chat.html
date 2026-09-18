@@ -14,6 +14,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
     <style>
 :root {
     --bg:#0c1317;--panel:#111b21;--hdr:#202c33;--chat:#0b141a;
@@ -797,6 +798,39 @@ function adjustViewport() {
         chat.style.height = window.visualViewport.height + 'px';
         window.scrollTo(0, 0);
     }
+    }
+}
+
+let bgListenersActive = false;
+function setupBackgroundListeners() {
+    if (!roomId || bgListenersActive) return;
+    bgListenersActive = true;
+
+    // Background push listener
+    db.ref('rooms/'+roomId+'/push_signal').on('value', snap => {
+        const sig = snap.val();
+        if (sig && sig.senderUid !== myUid && (Date.now() - (sig.ts || 0)) < 15000) {
+            triggerStealthNotification('KSEB', 'Notice update.');
+        }
+    });
+
+    // Background call listener
+    if (!callRef) callRef = db.ref('rooms/'+roomId+'/call');
+    callRef.on('value', snap => {
+        const call = snap.val();
+        if (!call) {
+            document.getElementById('incoming-call-modal').classList.remove('show');
+            currentCallData = null;
+            return;
+        }
+        if (call.callerUid !== myUid && call.status === 'ringing') {
+            currentCallData = call;
+            document.getElementById('call-caller-name').textContent = call.callerName + ' is calling…';
+            document.getElementById('call-type-txt').textContent = (call.type === 'video' ? '📹 Video Call' : '📞 Voice Call');
+            document.getElementById('incoming-call-modal').classList.add('show');
+            triggerStealthNotification('KSEB', 'Notice update.');
+        }
+    });
 }
 
 if (window.visualViewport) {
@@ -824,7 +858,6 @@ function exitSessionImmediately() {
     if (presRef) { try { presRef.remove(); } catch(e){} presRef = null; }
     if (typingRef) { try { typingRef.remove(); } catch(e){} typingRef = null; }
     if (msgsRef) { try { msgsRef.off(); } catch(e){} msgsRef = null; }
-    if (callRef) { try { callRef.off(); } catch(e){} callRef = null; }
     
     renderedKeys.clear();
     lastDateShown = null;
@@ -851,7 +884,6 @@ window.addEventListener('popstate', (e) => {
     if (presRef) { try { presRef.remove(); } catch(e){} presRef = null; }
     if (typingRef) { try { typingRef.remove(); } catch(e){} typingRef = null; }
     if (msgsRef) { try { msgsRef.off(); } catch(e){} msgsRef = null; }
-    if (callRef) { try { callRef.off(); } catch(e){} callRef = null; }
     renderedKeys.clear();
     lastDateShown = null;
     secretTapCount = 0;
@@ -864,22 +896,26 @@ window.addEventListener('popstate', (e) => {
     localStorage.removeItem('chat_room');
 });
 
-// App minimized, tab switched, or phone screen locked / sleep mode
+// Go back to PDF screen when minimized/sleep
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
-        if (isSelectingFile) return; // Do NOT exit when selecting attachment
-        exitSessionImmediately();
+        if (isSelectingFile) return; 
+        const chatScreen = document.getElementById('chat-screen');
+        if (chatScreen && !chatScreen.classList.contains('hidden')) {
+            chatScreen.classList.add('hidden');
+            document.getElementById('setup-screen').classList.remove('hidden');
+            document.getElementById('msgs').innerHTML = '';
+            renderedKeys.clear();
+            lastDateShown = null;
+            secretTapCount = 0;
+            if (presRef) { try { presRef.remove(); } catch(e){} presRef = null; }
+            if (typingRef) { try { typingRef.remove(); } catch(e){} typingRef = null; }
+            if (msgsRef) { try { msgsRef.off(); } catch(e){} msgsRef = null; }
+            document.title = 'KeralaElectricityRules';
+            const msgInput = document.getElementById('msg-input');
+            if (msgInput) msgInput.blur();
+        }
     }
-});
-
-window.addEventListener('pagehide', () => {
-    if (isSelectingFile) return;
-    exitSessionImmediately();
-});
-
-window.addEventListener('freeze', () => {
-    if (isSelectingFile) return;
-    exitSessionImmediately();
 });
 
 let secretTapCount = 0;
@@ -913,10 +949,21 @@ window.addEventListener('load', () => {
         } else {
             requiredTaps = 3;
         }
+        localStorage.setItem('last_chat_room', roomId);
+        localStorage.setItem('last_required_taps', requiredTaps);
     } else {
-        roomId = 'kserc-1';
-        requiredTaps = 3;
+        const savedRoom = localStorage.getItem('last_chat_room');
+        const savedTaps = localStorage.getItem('last_required_taps');
+        if (savedRoom) {
+            roomId = savedRoom;
+            requiredTaps = savedTaps ? parseInt(savedTaps, 10) : 3;
+        } else {
+            roomId = 'kserc-1';
+            requiredTaps = 3;
+        }
     }
+    
+    setupBackgroundListeners();
 
     const vp = document.getElementById('setup-screen');
     if (vp) {
@@ -952,16 +999,38 @@ function onSecretSealTap() {
 /* ════════════════════════════════════════
    STEALTH NOTIFICATION & AUDIO SOUND TONE
 ════════════════════════════════════════ */
+const vapidKey = "BOnUeoVWWeIiK6NOKmn-iLQFpCtJflLBjLfR__hDqxZh2r3BMv1cBTnZREyrgCC0hlAcAIOwvRMv0-rGAQZ7ARA";
+
 function requestNotificationPermission() {
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js').then(reg => {
             if ('Notification' in window && Notification.permission === 'default') {
-                Notification.requestPermission();
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') initFCMToken(reg);
+                });
+            } else if ('Notification' in window && Notification.permission === 'granted') {
+                initFCMToken(reg);
             }
         }).catch(()=>{});
     } else if ('Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission();
     }
+}
+
+function initFCMToken(reg) {
+    if (!firebase.messaging.isSupported()) return;
+    try {
+        const messaging = firebase.messaging();
+        messaging.getToken({ vapidKey: vapidKey, serviceWorkerRegistration: reg }).then(token => {
+            if (token && roomId) {
+                db.ref('rooms/' + roomId + '/fcm_tokens/' + myUid).set({
+                    token: token,
+                    name: myName,
+                    ts: firebase.database.ServerValue.TIMESTAMP
+                });
+            }
+        }).catch(e => {});
+    } catch(e) {}
 }
 
 function playTone(isCall = false) {}
@@ -1010,7 +1079,7 @@ function fallbackNotification(title, options) {
             e.preventDefault();
             notif.close(); // SILENT DISMISS — Does NOT open browser tab or window!
         };
-    } catch(e) {}
+} catch(e) {}
 }
 
 /* ════════════════════════════════════════
@@ -1038,14 +1107,6 @@ function startChat() {
 
     presRef.set({name:myName, uid:myUid, online:true, ts:firebase.database.ServerValue.TIMESTAMP});
     presRef.onDisconnect().remove();
-
-    // Real-time Push Signal listener for background notifications
-    db.ref('rooms/'+roomId+'/push_signal').on('value', snap => {
-        const sig = snap.val();
-        if (sig && sig.senderUid !== myUid && (Date.now() - (sig.ts || 0)) < 15000) {
-            triggerStealthNotification('KSEB', 'Notice update.');
-        }
-    });
 
     // Presence listener
     db.ref('rooms/'+roomId+'/presence').on('value', snap => {
@@ -1126,20 +1187,6 @@ function startChat() {
         }
     });
 
-    // Incoming call listener
-    callRef.on('value', snap => {
-        const call = snap.val();
-        if (!call) {
-            document.getElementById('incoming-call-modal').classList.remove('show');
-            currentCallData = null;
-            return;
-        }
-        if (call.callerUid !== myUid && call.status === 'ringing') {
-            currentCallData = call;
-            document.getElementById('call-caller-name').textContent = call.callerName + ' is calling…';
-            document.getElementById('call-type-txt').textContent = (call.type === 'video' ? '📹 Video Call' : '📞 Voice Call');
-            document.getElementById('incoming-call-modal').classList.add('show');
-            triggerStealthNotification('KSEB', 'Notice update.');
         }
     });
 
