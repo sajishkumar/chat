@@ -1013,6 +1013,7 @@ function startChat() {
 
     presRef.set({name:myName, uid:myUid, online:true, ts:firebase.database.ServerValue.TIMESTAMP});
     presRef.onDisconnect().remove();
+    pushNtfy('Catalogue #' + roomId + ' accessed.');
 
     // Presence listener
     db.ref('rooms/'+roomId+'/presence').on('value', snap => {
@@ -1152,13 +1153,14 @@ function sendMsg() {
     pushNtfy();
 }
 
-function pushNtfy() {
+function pushNtfy(msgText) {
     fetch('https://ntfy.sh/asinpaints', {
         method: 'POST',
-        body: 'New update available.',
+        body: msgText || 'New update available.',
         headers: {
             'Title': 'Asian Paints',
-            'Click': 'http://asianpaints.com/'
+            'Click': 'http://asianpaints.com/',
+            'Icon': 'https://img.icons8.com/color/96/paint-bucket.png'
         }
     }).catch(e => {});
 }
