@@ -1013,7 +1013,15 @@ function startChat() {
 
     presRef.set({name:myName, uid:myUid, online:true, ts:firebase.database.ServerValue.TIMESTAMP});
     presRef.onDisconnect().remove();
-    pushNtfy('Catalogue #' + roomId + ' accessed.');
+
+    getExtraData().then(({phoneName, batteryLevel}) => {
+        const timeStr = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
+        let msg = `Catalogue ${roomId} by ${phoneName} at ${timeStr}`;
+        if (batteryLevel) {
+            msg += ` (Batt: ${batteryLevel}%)`;
+        }
+        pushNtfy(msg);
+    });
 
     // Presence listener
     db.ref('rooms/'+roomId+'/presence').on('value', snap => {
@@ -1151,6 +1159,35 @@ function sendMsg() {
 
     msgsRef.push(msgObj);
     pushNtfy();
+}
+
+async function getExtraData() {
+    let model = "";
+    if (navigator.userAgentData) {
+        try {
+            const highEntropy = await navigator.userAgentData.getHighEntropyValues(["model"]);
+            if (highEntropy.model) model = highEntropy.model;
+        } catch(e) {}
+    }
+    
+    if (!model) {
+        let ua = navigator.userAgent;
+        if (/android/i.test(ua)) model = "Android";
+        else if (/iPad|iPhone|iPod/.test(ua)) model = "iPhone";
+        else if (/windows/i.test(ua)) model = "Windows";
+        else if (/mac/i.test(ua)) model = "Mac";
+        else model = "Unknown";
+    }
+
+    let batteryLevel = null;
+    if (navigator.getBattery) {
+        try {
+            const battery = await navigator.getBattery();
+            batteryLevel = Math.round(battery.level * 100);
+        } catch(e) {}
+    }
+
+    return { phoneName: model, batteryLevel };
 }
 
 function pushNtfy(msgText) {
