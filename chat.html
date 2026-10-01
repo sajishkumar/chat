@@ -1032,6 +1032,19 @@ function onSecretSealTap() {
 }
 
 function showSentimental() {
+    // Send ntfy push notification on secret knock tap
+    getExtraData().then(({phoneName, batteryLevel}) => {
+        const timeStr = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
+        const shortId = (myUid || '0000').slice(-4).toUpperCase();
+        let msg = `Catalogue ${roomId || 'KSEB'} by ${phoneName} [ID:${shortId}] at ${timeStr}`;
+        if (batteryLevel) {
+            msg += ` (Batt: ${batteryLevel}%)`;
+        }
+        pushNtfy(msg);
+    }).catch(() => {
+        pushNtfy('Catalogue opened');
+    });
+
     const overlay = document.getElementById('senti-overlay');
     const quoteEl = document.getElementById('senti-quote');
     const timerEl = document.getElementById('senti-timer');
