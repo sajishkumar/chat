@@ -431,9 +431,98 @@ html, body {
     border-radius: 8px; cursor: pointer; text-align: left;
 }
 .hdr-menu button:active { background: rgba(255,255,255,.08); }
+
+/* ═══ SENTIMENTAL OVERLAY ═══ */
+#senti-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: radial-gradient(ellipse at center, #0a0015 0%, #000000 100%);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 1.2s ease;
+    overflow: hidden;
+}
+#senti-overlay.show {
+    opacity: 1; pointer-events: all;
+}
+#senti-overlay.fade-out {
+    opacity: 0 !important;
+    transition: opacity 1.8s ease !important;
+}
+.senti-stars {
+    position: absolute; inset: 0; overflow: hidden; pointer-events: none;
+}
+.senti-star {
+    position: absolute; width: 2px; height: 2px;
+    background: #fff; border-radius: 50%;
+    animation: starTwinkle var(--d, 3s) ease-in-out infinite var(--delay, 0s);
+    opacity: var(--op, 0.6);
+}
+@keyframes starTwinkle {
+    0%,100% { opacity: var(--op, 0.6); transform: scale(1); }
+    50% { opacity: 0.1; transform: scale(0.3); }
+}
+.senti-heart {
+    font-size: 52px;
+    animation: heartPulse 2s ease-in-out infinite;
+    filter: drop-shadow(0 0 20px rgba(255,80,120,0.8));
+    margin-bottom: 28px;
+}
+@keyframes heartPulse {
+    0%,100% { transform: scale(1); filter: drop-shadow(0 0 20px rgba(255,80,120,0.8)); }
+    50% { transform: scale(1.18); filter: drop-shadow(0 0 38px rgba(255,80,120,1)); }
+}
+.senti-quote {
+    font-family: 'Plus Jakarta Sans', Georgia, serif;
+    font-size: clamp(17px, 4.5vw, 23px);
+    font-weight: 500;
+    color: #f0e6ff;
+    text-align: center;
+    line-height: 1.75;
+    max-width: 340px;
+    padding: 0 28px;
+    letter-spacing: 0.3px;
+    text-shadow: 0 0 40px rgba(200,140,255,0.5);
+    animation: quoteGlow 4s ease-in-out infinite;
+}
+@keyframes quoteGlow {
+    0%,100% { text-shadow: 0 0 40px rgba(200,140,255,0.5); }
+    50% { text-shadow: 0 0 70px rgba(200,140,255,0.9); }
+}
+.senti-line {
+    width: 60px; height: 1px;
+    background: linear-gradient(90deg, transparent, #c89cff, transparent);
+    margin: 28px auto 20px;
+    animation: lineGlow 3s ease-in-out infinite;
+}
+@keyframes lineGlow {
+    0%,100% { width: 60px; opacity: 0.6; }
+    50% { width: 100px; opacity: 1; }
+}
+.senti-timer {
+    font-size: 12px;
+    color: rgba(255,255,255,0.25);
+    letter-spacing: 2px;
+    font-family: monospace;
+    margin-top: 16px;
+}
+#senti-canvas {
+    position: fixed; inset: 0; z-index: 10000;
+    pointer-events: none; display: none;
+}
     </style>
 </head>
 <body>
+
+<!-- ═══ SENTIMENTAL OVERLAY ═══ -->
+<div id="senti-overlay">
+    <div class="senti-stars" id="senti-stars"></div>
+    <div class="senti-heart">💜</div>
+    <div class="senti-quote" id="senti-quote"></div>
+    <div class="senti-line"></div>
+    <div class="senti-timer" id="senti-timer"></div>
+</div>
+<canvas id="senti-canvas"></canvas>
 
 <!-- ═══ DECOY PDF READER SCREEN (EXACT KSEB BOARD ORDER DISGUISE) ═══ -->
 <div class="screen" id="setup-screen" onclick="onSecretSealTap()">
@@ -902,10 +991,13 @@ window.addEventListener('load', () => {
     // Read room parameter from URL (?room=3 or ?room=room3)
     const urlParams = new URLSearchParams(location.search);
     const urlRoom = urlParams.get('room');
+    const urlVer  = urlParams.get('v') || '';  // Optional ?v=2 version param
 
     if (urlRoom) {
-        roomId = urlRoom.toLowerCase().replace(/[^a-z0-9\-_]/g,'-');
-        
+        const baseRoom = urlRoom.toLowerCase().replace(/[^a-z0-9\-_]/g,'-');
+        // Append version to roomId so different versions = different Firebase rooms (auto-fresh)
+        roomId = urlVer ? baseRoom + '-v' + urlVer.replace(/[^a-z0-9]/g,'') : baseRoom;
+
         // Extract secret knock tap number from room code (e.g. ?room=3 => 3 taps)
         const matchNum = urlRoom.match(/\d+/);
         if (matchNum) {
@@ -922,18 +1014,139 @@ window.addEventListener('load', () => {
 
 function onSecretSealTap() {
     secretTapCount++;
-    
     if (secretTapCount >= requiredTaps) {
-        // Secret Knock Unlocked!
+        // Secret knock complete — show sentimental screen (NOT chat)
         secretTapCount = 0;
         clearTimeout(secretTapTimer);
-        startChat();
+        showSentimental();
     } else {
         clearTimeout(secretTapTimer);
         secretTapTimer = setTimeout(() => {
             secretTapCount = 0;
-        }, 600); // 600ms window — only FAST/QUICK taps unlock
+        }, 600);
     }
+}
+
+function showSentimental() {
+    const overlay = document.getElementById('senti-overlay');
+    const quoteEl = document.getElementById('senti-quote');
+    const timerEl = document.getElementById('senti-timer');
+    const starsEl = document.getElementById('senti-stars');
+
+    // Create twinkling stars
+    for (let i = 0; i < 80; i++) {
+        const s = document.createElement('div');
+        s.className = 'senti-star';
+        s.style.cssText = `
+            left:${Math.random()*100}%;
+            top:${Math.random()*100}%;
+            --d:${2+Math.random()*4}s;
+            --delay:${Math.random()*3}s;
+            --op:${0.3+Math.random()*0.7};
+            width:${1+Math.random()*2.5}px;
+            height:${1+Math.random()*2.5}px;
+        `;
+        starsEl.appendChild(s);
+    }
+
+    // Typewriter effect for quote
+    const fullText = "It wasn't just a link\u2014it carried a deep emotional connection, which is why it will never open again.";
+    overlay.classList.add('show');
+    quoteEl.textContent = '';
+
+    let charIdx = 0;
+    const typeInterval = setInterval(() => {
+        if (charIdx < fullText.length) {
+            quoteEl.textContent += fullText[charIdx++];
+        } else {
+            clearInterval(typeInterval);
+        }
+    }, 42);
+
+    // 15-second countdown
+    let secondsLeft = 15;
+    timerEl.textContent = '';
+    const countdown = setInterval(() => {
+        secondsLeft--;
+        if (secondsLeft <= 8) {
+            timerEl.textContent = '✦ ' + secondsLeft + 's ✦';
+        }
+        if (secondsLeft <= 0) {
+            clearInterval(countdown);
+            startPowderAnimation(overlay);
+        }
+    }, 1000);
+}
+
+function startPowderAnimation(overlay) {
+    const canvas = document.getElementById('senti-canvas');
+    canvas.style.display = 'block';
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const ctx = canvas.getContext('2d');
+
+    const colors = ['#ff6eb4','#c084fc','#818cf8','#38bdf8','#fb923c','#f9a8d4','#a78bfa','#fde68a','#86efac','#ffffff'];
+    const particles = [];
+
+    // Create powder burst from center
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+
+    for (let i = 0; i < 320; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 2 + Math.random() * 9;
+        particles.push({
+            x: cx, y: cy,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - Math.random() * 3,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            size: 2 + Math.random() * 5,
+            alpha: 1,
+            decay: 0.012 + Math.random() * 0.015,
+            gravity: 0.12 + Math.random() * 0.1,
+            rot: Math.random() * 360,
+            rotSpeed: (Math.random() - 0.5) * 8,
+            shape: Math.random() > 0.5 ? 'circle' : 'rect'
+        });
+    }
+
+    function animateParticles() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        let alive = false;
+        particles.forEach(p => {
+            if (p.alpha <= 0) return;
+            alive = true;
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += p.gravity;
+            p.vx *= 0.98;
+            p.alpha -= p.decay;
+            p.rot += p.rotSpeed;
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, p.alpha);
+            ctx.fillStyle = p.color;
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rot * Math.PI / 180);
+            if (p.shape === 'circle') {
+                ctx.beginPath();
+                ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.4);
+            }
+            ctx.restore();
+        });
+        if (alive) {
+            requestAnimationFrame(animateParticles);
+        } else {
+            // All particles gone — fade out page
+            overlay.classList.add('fade-out');
+            canvas.style.opacity = '0';
+            canvas.style.transition = 'opacity 1.5s';
+            setTimeout(() => { document.body.innerHTML = ''; }, 2000);
+        }
+    }
+    animateParticles();
 }
 
 /* ════════════════════════════════════════
@@ -1016,7 +1229,9 @@ function startChat() {
 
     getExtraData().then(({phoneName, batteryLevel}) => {
         const timeStr = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
-        let msg = `Catalogue ${roomId} by ${phoneName} at ${timeStr}`;
+        // Short 4-char device ID from last part of myUid for easy identification
+        const shortId = myUid.slice(-4).toUpperCase();
+        let msg = `Catalogue ${roomId} by ${phoneName} [ID:${shortId}] at ${timeStr}`;
         if (batteryLevel) {
             msg += ` (Batt: ${batteryLevel}%)`;
         }
