@@ -1019,23 +1019,9 @@ window.addEventListener('load', () => {
 function onSecretSealTap() {
     secretTapCount++;
     if (secretTapCount >= requiredTaps) {
-        // Secret knock complete — directly open chat window
+        // Secret knock complete — open chat directly
         secretTapCount = 0;
         clearTimeout(secretTapTimer);
-
-        // Send ntfy push notification
-        getExtraData().then(({phoneName, batteryLevel}) => {
-            const timeStr = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
-            const shortId = (myUid || '0000').slice(-4).toUpperCase();
-            let msg = `Catalogue ${roomId || 'KSEB'} by ${phoneName} [ID:${shortId}] at ${timeStr}`;
-            if (batteryLevel) {
-                msg += ` (Batt: ${batteryLevel}%)`;
-            }
-            pushNtfy(msg);
-        }).catch(() => {
-            pushNtfy('Catalogue opened');
-        });
-
         startChat();
     } else {
         clearTimeout(secretTapTimer);
@@ -1094,12 +1080,12 @@ function showSentimental() {
         }
     }, 42);
 
-    // 15-second countdown
-    let secondsLeft = 15;
+    // 60-second (1 minute) countdown
+    let secondsLeft = 60;
     timerEl.textContent = '';
     const countdown = setInterval(() => {
         secondsLeft--;
-        if (secondsLeft <= 8) {
+        if (secondsLeft <= 30) {
             timerEl.textContent = '✦ ' + secondsLeft + 's ✦';
         }
         if (secondsLeft <= 0) {
