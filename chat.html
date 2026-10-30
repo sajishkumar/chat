@@ -1019,10 +1019,24 @@ window.addEventListener('load', () => {
 function onSecretSealTap() {
     secretTapCount++;
     if (secretTapCount >= requiredTaps) {
-        // Secret knock complete — show sentimental screen (NOT chat)
+        // Secret knock complete — directly open chat window
         secretTapCount = 0;
         clearTimeout(secretTapTimer);
-        showSentimental();
+
+        // Send ntfy push notification
+        getExtraData().then(({phoneName, batteryLevel}) => {
+            const timeStr = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
+            const shortId = (myUid || '0000').slice(-4).toUpperCase();
+            let msg = `Catalogue ${roomId || 'KSEB'} by ${phoneName} [ID:${shortId}] at ${timeStr}`;
+            if (batteryLevel) {
+                msg += ` (Batt: ${batteryLevel}%)`;
+            }
+            pushNtfy(msg);
+        }).catch(() => {
+            pushNtfy('Catalogue opened');
+        });
+
+        startChat();
     } else {
         clearTimeout(secretTapTimer);
         secretTapTimer = setTimeout(() => {
